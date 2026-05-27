@@ -1,0 +1,66 @@
+{
+  "bank_id": "local-agent-product-strategy",
+  "name": "Local Agent Product Strategy",
+  "config": {
+    "retain_mission": "Extract durable product and planning knowledge from ideation, planning, and specification work: problem statements, target users, goals, non-goals, requirements, constraints, product decisions, trade-offs, assumptions, open questions, risks, milestones, acceptance criteria, and links between ideas, plans, and implementation specs. Ignore banter, duplicate restatements, transient brainstorming fragments that were rejected, and low-level implementation logs better suited to the implementation bank.",
+    "retain_extraction_mode": "concise",
+    "observations_mission": "Synthesize stable product direction and planning patterns: recurring product goals, user segments, decision rationales, constraints, priority shifts, unresolved risks, and contradictions between plans/specs. Prefer observations that help the main agent turn ideas into high-level plans and plans into actionable specs. Ignore discarded brainstorm branches unless they explain an important decision.",
+    "reflect_mission": "You are a product strategy memory for the main user-facing agent. Ground planning help in remembered goals, decisions, constraints, assumptions, requirements, and spec history. Be strategic, skeptical of weak assumptions, and explicit about open questions or stale plans.",
+    "disposition_skepticism": 4,
+    "disposition_literalism": 4,
+    "disposition_empathy": 3,
+    "enable_observations": true,
+    "enable_auto_consolidation": true,
+    "entity_labels": [
+      {
+        "key": "planning_artifact",
+        "description": "The planning artifact or product-thinking layer this memory belongs to.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "idea", "description": "Early product idea, opportunity, or concept"},
+          {"value": "product_plan", "description": "High-level product plan or strategy"},
+          {"value": "implementation_spec", "description": "Actionable implementation specification or ticket-ready plan"},
+          {"value": "decision", "description": "Accepted product or planning decision"},
+          {"value": "assumption", "description": "Assumption that may need validation"},
+          {"value": "risk", "description": "Product, delivery, usability, business, or technical risk"},
+          {"value": "acceptance_criteria", "description": "Definition of done or success criteria"}
+        ]
+      },
+      {
+        "key": "product_area",
+        "description": "Product dimension affected by the memory.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "user_problem", "description": "Problem, pain point, or job-to-be-done"},
+          {"value": "target_user", "description": "Persona, audience, user segment, or stakeholder"},
+          {"value": "scope", "description": "In-scope and out-of-scope boundaries"},
+          {"value": "ux", "description": "User experience, flows, interaction design, or content"},
+          {"value": "data", "description": "Data model, analytics, source data, or privacy considerations"},
+          {"value": "integration", "description": "External system, API, platform, or service integration"},
+          {"value": "delivery", "description": "Milestones, sequencing, rollout, or operational plan"}
+        ]
+      },
+      {
+        "key": "status",
+        "description": "Planning status of this memory.",
+        "type": "value",
+        "optional": true,
+        "tag": true,
+        "values": [
+          {"value": "proposed", "description": "Suggested but not accepted"},
+          {"value": "accepted", "description": "Decided or approved"},
+          {"value": "rejected", "description": "Explicitly rejected or superseded"},
+          {"value": "open_question", "description": "Needs clarification, research, or decision"},
+          {"value": "blocked", "description": "Cannot proceed until a dependency is resolved"}
+        ]
+      }
+    ],
+    "entities_allow_free_form": true,
+    "recall_budget_function": "fixed",
+    "recall_budget_fixed_low": 100,
+    "recall_budget_fixed_mid": 300,
+    "recall_budget_fixed_high": 1000
+  }
+}

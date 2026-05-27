@@ -1,0 +1,79 @@
+{
+  "bank_id": "local-agent-implementation-work",
+  "name": "Local Agent Implementation Work",
+  "config": {
+    "retain_mission": "Extract durable implementation knowledge produced by delegated peer agents: technical decisions, research findings, architecture choices, API contracts, repository/module context, commands that matter, test results, review findings, defects, blockers, work ownership, handoff state, and links back to specs. Preserve exact error messages only when they diagnose a durable issue. Ignore routine command chatter, full tool dumps, transient build logs, greetings, and speculative ideas that were not adopted.",
+    "retain_extraction_mode": "concise",
+    "observations_mission": "Synthesize stable implementation observations across parallel agents: recurring blockers, accepted technical patterns, module responsibilities, open defects, validated research conclusions, review themes, and contradictions between implementation state and specs. Focus on what helps future builder/reviewer/tester agents resume accurately without reading every log. Ignore one-off failed attempts unless they explain a current blocker or decision.",
+    "reflect_mission": "You are an implementation memory for a team of parallel agents. Ground answers in remembered specs, decisions, research conclusions, build state, tests, reviews, and blockers. Be precise, skeptical, and citation-oriented; distinguish confirmed facts from hypotheses and stale handoff notes.",
+    "disposition_skepticism": 4,
+    "disposition_literalism": 5,
+    "disposition_empathy": 1,
+    "enable_observations": true,
+    "enable_auto_consolidation": true,
+    "entity_labels": [
+      {
+        "key": "work_phase",
+        "description": "The delegated work phase represented by this memory.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "research", "description": "Investigation, options analysis, documentation review, or discovery"},
+          {"value": "build", "description": "Implementation, refactor, integration, or configuration work"},
+          {"value": "review", "description": "Code, design, security, product, or quality review"},
+          {"value": "test", "description": "Validation, QA, automated tests, manual checks, or smoke tests"},
+          {"value": "handoff", "description": "State transfer, resume notes, or coordination between agents"},
+          {"value": "ops", "description": "Deployment, runtime, monitoring, incident, or environment work"}
+        ]
+      },
+      {
+        "key": "artifact_type",
+        "description": "The kind of implementation artifact or fact being remembered.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "decision", "description": "Accepted technical decision or rationale"},
+          {"value": "api_contract", "description": "Interface, endpoint, schema, event, or integration contract"},
+          {"value": "module_context", "description": "Repository, file, component, package, or ownership context"},
+          {"value": "finding", "description": "Research or review finding"},
+          {"value": "defect", "description": "Bug, regression, failing behavior, or quality issue"},
+          {"value": "test_result", "description": "Relevant test, benchmark, validation, or smoke result"},
+          {"value": "blocker", "description": "Blocking dependency, missing information, failing service, or unresolved risk"}
+        ]
+      },
+      {
+        "key": "work_status",
+        "description": "Current implementation state indicated by this memory.",
+        "type": "value",
+        "optional": true,
+        "tag": true,
+        "values": [
+          {"value": "todo", "description": "Not started or queued"},
+          {"value": "in_progress", "description": "Currently being worked"},
+          {"value": "done", "description": "Completed and accepted"},
+          {"value": "blocked", "description": "Blocked by dependency or unresolved issue"},
+          {"value": "superseded", "description": "No longer current due to later work"}
+        ]
+      },
+      {
+        "key": "agent_role",
+        "description": "Role of the agent/source that produced or should consume the memory.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "orchestrator", "description": "Main planning or delegation agent"},
+          {"value": "researcher", "description": "Research/dependency/documentation agent"},
+          {"value": "builder", "description": "Implementation agent"},
+          {"value": "reviewer", "description": "Review/critique agent"},
+          {"value": "tester", "description": "Validation/QA agent"},
+          {"value": "ops", "description": "Runtime/deployment agent"}
+        ]
+      }
+    ],
+    "entities_allow_free_form": true,
+    "recall_budget_function": "fixed",
+    "recall_budget_fixed_low": 100,
+    "recall_budget_fixed_mid": 350,
+    "recall_budget_fixed_high": 1200
+  }
+}

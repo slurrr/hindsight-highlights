@@ -1,0 +1,62 @@
+{
+  "bank_id": "local-agent-user-profile",
+  "name": "Local Agent User Profile",
+  "config": {
+    "retain_mission": "Extract durable user-specific memory that should personalize future work: stated goals, preferences, constraints, communication style, working style, interests, relationships, commitments, deadlines, routines, recurring responsibilities, and explicit feedback about agent behavior. Extract outputs from scheduled assistants only when they reveal a durable preference, commitment, standing task, or user-relevant pattern. Ignore greetings, small talk, one-off transient moods, raw notification noise, and implementation details that belong in project or procedural banks.",
+    "retain_extraction_mode": "concise",
+    "observations_mission": "Synthesize stable user profile observations from repeated evidence: preferences, priorities, routines, communication style, trusted sources, recurring responsibilities, long-running goals, and contradictions or changes over time. Focus on durable patterns that should influence personalization. Ignore one-off events unless they update a standing commitment or preference.",
+    "reflect_mission": "You are the memory perspective for the main user-facing agent serving one user. Use remembered preferences, goals, constraints, routines, and feedback to help personalize responses and decide what matters. Be warm but concise. Flag uncertainty and stale or conflicting profile information instead of over-assuming.",
+    "disposition_skepticism": 3,
+    "disposition_literalism": 3,
+    "disposition_empathy": 4,
+    "enable_observations": true,
+    "enable_auto_consolidation": true,
+    "entity_labels": [
+      {
+        "key": "profile_area",
+        "description": "Which durable part of the user's profile this memory informs.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "goals", "description": "Long-running personal, creative, product, or professional goals"},
+          {"value": "preferences", "description": "Likes, dislikes, defaults, and explicit choices"},
+          {"value": "communication_style", "description": "Tone, format, cadence, and interaction preferences"},
+          {"value": "workflow", "description": "How the user likes work planned, delegated, reviewed, or summarized"},
+          {"value": "commitments", "description": "Responsibilities, promises, deadlines, or recurring obligations"},
+          {"value": "relationships", "description": "Important people, teams, communities, or social context"},
+          {"value": "interests", "description": "Topics and domains the user follows or cares about"},
+          {"value": "assistant_feedback", "description": "User feedback about agent behavior or memory behavior"}
+        ]
+      },
+      {
+        "key": "durability",
+        "description": "How long this fact is likely to remain useful.",
+        "type": "value",
+        "optional": false,
+        "tag": true,
+        "values": [
+          {"value": "stable", "description": "A durable fact or long-lived preference"},
+          {"value": "evolving", "description": "Likely to change and should be checked against newer evidence"},
+          {"value": "time_bound", "description": "Useful only until a deadline, event, or project phase passes"}
+        ]
+      },
+      {
+        "key": "source_system",
+        "description": "Originating agent subsystem or data source.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "main_agent", "description": "The user-facing agent conversation"},
+          {"value": "scheduled_assistant", "description": "A scheduled non-user-facing assistant output"},
+          {"value": "manual_note", "description": "A user-authored or operator-authored note"},
+          {"value": "external_tool", "description": "External system such as email, calendar, socials, docs, or issue tracker"}
+        ]
+      }
+    ],
+    "entities_allow_free_form": true,
+    "recall_budget_function": "fixed",
+    "recall_budget_fixed_low": 80,
+    "recall_budget_fixed_mid": 250,
+    "recall_budget_fixed_high": 800
+  }
+}

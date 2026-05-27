@@ -1,0 +1,68 @@
+{
+  "bank_id": "local-agent-framework-procedural",
+  "name": "Local Agent Framework Procedural",
+  "config": {
+    "retain_mission": "Extract durable operating knowledge for the agent framework itself: agent roles, delegation protocols, memory routing rules, recall policies, tool-use procedures, safety constraints, escalation rules, output contracts, review/test checklists, and lessons learned from coordination failures. Ignore project-specific facts that belong in product or implementation banks, raw tool output, casual conversation, and temporary task state.",
+    "retain_extraction_mode": "concise",
+    "observations_mission": "Synthesize durable framework-level operating patterns: effective delegation strategies, recurring coordination failures, safe memory routing conventions, review/test practices, and procedure changes. Focus on reusable rules that improve future multi-agent work. Ignore one-off project content unless it teaches a general operating lesson.",
+    "reflect_mission": "You are the procedural memory for a local multi-agent framework. Use remembered operating rules, role boundaries, delegation patterns, recall policy, and safety constraints to guide agents. Be direct, literal, and conservative; prefer explicit procedures over improvisation and flag ambiguity.",
+    "disposition_skepticism": 4,
+    "disposition_literalism": 5,
+    "disposition_empathy": 1,
+    "enable_observations": true,
+    "enable_auto_consolidation": true,
+    "entity_labels": [
+      {
+        "key": "procedure_area",
+        "description": "Framework operating area affected by the memory.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "agent_roles", "description": "Responsibilities and boundaries of agent classes"},
+          {"value": "delegation", "description": "Task splitting, assignment, handoffs, and parallel work protocols"},
+          {"value": "memory_routing", "description": "Which banks to retain to or recall from and with what filters"},
+          {"value": "tool_use", "description": "Tool invocation conventions, limits, and hygiene"},
+          {"value": "review_test", "description": "Review, verification, testing, and acceptance procedures"},
+          {"value": "user_communication", "description": "Rules for the main user-facing agent's communication"},
+          {"value": "privacy_safety", "description": "Privacy, sensitive data, approvals, and escalation"},
+          {"value": "scheduling", "description": "Scheduled agent cadence, retries, and maintenance windows"}
+        ]
+      },
+      {
+        "key": "procedure_type",
+        "description": "Shape of procedural knowledge for hard filtering at recall time.",
+        "type": "value",
+        "optional": false,
+        "tag": true,
+        "values": [
+          {"value": "rule", "description": "Concise canonical operating rule or invariant"},
+          {"value": "procedure", "description": "Step-by-step process or runbook"},
+          {"value": "checklist", "description": "Verification or review checklist"},
+          {"value": "lesson", "description": "Reusable lesson learned from a past success or failure"},
+          {"value": "contract", "description": "Output/interface contract between agents or systems"}
+        ]
+      },
+      {
+        "key": "agent_class",
+        "description": "Agent class most relevant to this operating memory.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "main_user_agent", "description": "The only agent that communicates with the user"},
+          {"value": "planner", "description": "Idea, product plan, and spec creation agent"},
+          {"value": "researcher", "description": "Research and discovery peer"},
+          {"value": "builder", "description": "Implementation peer"},
+          {"value": "reviewer", "description": "Review/critique peer"},
+          {"value": "tester", "description": "Testing and validation peer"},
+          {"value": "scheduled_assistant", "description": "Non-user-facing scheduled personal assistant"},
+          {"value": "future_system", "description": "Extensibility rules for future agent subsystems"}
+        ]
+      }
+    ],
+    "entities_allow_free_form": true,
+    "recall_budget_function": "fixed",
+    "recall_budget_fixed_low": 80,
+    "recall_budget_fixed_mid": 250,
+    "recall_budget_fixed_high": 800
+  }
+}

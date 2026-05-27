@@ -1,0 +1,64 @@
+{
+  "bank_id": "local-agent-assistant-ops",
+  "name": "Local Agent Assistant Ops",
+  "config": {
+    "retain_mission": "Extract durable operational memory from scheduled personal-assistant agents: task definitions, schedules, preferences for triage/summaries, recurring external signals, standing filters, notable changes, decisions made by automation, unresolved follow-ups, and summary outputs that the main user-facing agent may need. Ignore raw email/social/feed content unless it changes a standing pattern, creates a follow-up, or is explicitly important. Do not store sensitive raw message bodies when a concise fact is enough.",
+    "retain_extraction_mode": "concise",
+    "observations_mission": "Synthesize durable assistant-ops patterns: recurring triage outcomes, sources that matter, standing rules, schedule effectiveness, follow-up patterns, preference changes, and contradictions between what automations did and what the user later wanted. Focus on improving future scheduled tasks and informing the main agent's user-facing summaries. Ignore one-off notifications and ephemeral inbox noise.",
+    "reflect_mission": "You are the memory perspective for scheduled personal-assistant agents whose outputs are communicated only through the main user-facing agent. Use memories to summarize what changed, what needs attention, which standing rules apply, and what follow-ups remain. Be privacy-conscious, concise, and explicit about uncertainty.",
+    "disposition_skepticism": 3,
+    "disposition_literalism": 4,
+    "disposition_empathy": 3,
+    "enable_observations": true,
+    "enable_auto_consolidation": true,
+    "entity_labels": [
+      {
+        "key": "assistant_domain",
+        "description": "Scheduled assistant domain or external surface.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "email", "description": "Email triage, drafts, threads, senders, and inbox maintenance"},
+          {"value": "calendar", "description": "Calendar review, scheduling, reminders, and availability"},
+          {"value": "socials", "description": "Social network monitoring, posting queues, replies, and mentions"},
+          {"value": "feeds", "description": "Newsletters, RSS, articles, blogs, or saved reading"},
+          {"value": "documents", "description": "Drive/files/docs maintenance and summaries"},
+          {"value": "finance", "description": "Bills, receipts, invoices, budgets, or finance admin"},
+          {"value": "general_admin", "description": "Miscellaneous recurring administrative tasks"}
+        ]
+      },
+      {
+        "key": "ops_memory_type",
+        "description": "The role of this memory in scheduled assistant operation.",
+        "type": "multi-values",
+        "tag": true,
+        "values": [
+          {"value": "standing_rule", "description": "Durable automation rule, filter, or user preference"},
+          {"value": "scheduled_task", "description": "Definition, cadence, or ownership of a scheduled task"},
+          {"value": "summary_output", "description": "Digest, brief, triage result, or user-facing summary material"},
+          {"value": "follow_up", "description": "Action item or unresolved item requiring attention"},
+          {"value": "external_signal", "description": "Recurring or notable signal from an external source"},
+          {"value": "exception", "description": "Unexpected condition, failed automation, ambiguous case, or escalation"}
+        ]
+      },
+      {
+        "key": "attention_level",
+        "description": "How much attention this memory likely requires from the main agent/user.",
+        "type": "value",
+        "optional": true,
+        "tag": true,
+        "values": [
+          {"value": "informational", "description": "Useful context but no action needed"},
+          {"value": "needs_review", "description": "Should be reviewed by the main agent before user communication"},
+          {"value": "needs_user", "description": "Requires user decision, approval, or awareness"},
+          {"value": "urgent", "description": "Time-sensitive or potentially blocking"}
+        ]
+      }
+    ],
+    "entities_allow_free_form": true,
+    "recall_budget_function": "fixed",
+    "recall_budget_fixed_low": 80,
+    "recall_budget_fixed_mid": 250,
+    "recall_budget_fixed_high": 800
+  }
+}
