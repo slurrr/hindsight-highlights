@@ -5,9 +5,9 @@ Local ops repo and control surface for running Hindsight as a first-class servic
 - Planning doc: `docs/PLAN.md`
 - Service env: `env/hindsight.env`
 - Optional local overrides/secrets: `env/hindsight.local.env` (gitignored)
-- systemd (user) units: `systemd/`
+- systemd units + install notes: `systemd/`
 - Utility scripts: `scripts/`
-- Editable playground templates/scenarios: `playground/`
+- Backend config surface (banks/templates/examples): `config/`
 
 ## Quick control surface
 
@@ -29,4 +29,4 @@ The API is configured by files in this repo and targets the plan endpoints:
 - Hindsight API: `127.0.0.1:8888`
 - vLLM: `127.0.0.1:8002`
 
-Bank-level customization lives under `playground/`; service-level defaults stay in `env/hindsight.env`.
+Bank desired-state lives under `config/banks/`; service-level defaults stay in `env/hindsight.env`.

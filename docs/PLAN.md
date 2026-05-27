@@ -22,27 +22,31 @@ Target endpoints:
 Purpose: an ops repo for running Hindsight locally.
 
 Contains:
-- `env/`: authoritative service env config
-- `systemd/`: unit files
-- `scripts/`: init/reset/healthcheck utilities
+- `env/`: authoritative service env config (server runtime behavior)
+- `config/`: human-readable, versioned *backend configuration surface*
+  - `config/banks/`: bank definitions (JSON)
+  - `config/templates/`: known-good bank templates (JSON)
+  - `config/examples/`: example payloads / smoke inputs
+- `scripts/`: thin operational commands (apply config, healthcheck, reset)
+- `systemd/`: system unit files and install notes
 - `docs/`: durable docs/decisions
 
 Runtime roots (durable + observable):
-- DB data: `~/data/hindsight-pg/` (fresh)
-- Logs/pids: `~/runs/hindsight/`
+- DB data: Fedora `postgresql.service` package default (`/var/lib/pgsql/data`)
+- Logs: journald for `postgresql.service` and `hindsight-api.service`
 - Caches: under `~/cache/` (via env)
 
-### Ownership contract
-- **This repo owns**:
-  - DB URL + schema
-  - Hindsight server worker/concurrency/timeouts defaults
-  - retrieval model choices (embeddings/reranker) unless deliberately delegated to clients
-  - “safe defaults” for memory extraction (structured outputs, etc.)
-- **Clients (pi-ghosty) own**:
-  - bank semantics (what banks exist, what they mean)
-  - when to call retain/recall/consolidate
-  - per-call toggles (e.g. disable thinking for memory calls if desired)
-  - tagging conventions
+### Ownership contract (explicit, avoids split-brain)
+- **This repo owns** (authoritative, reviewable):
+  - DB URL + schema + extensions (pgvector)
+  - Hindsight server runtime config (timeouts/concurrency/retrieval models)
+  - *Bank definitions as code* (`config/banks/*.json`) so you can see/reason about them in one place
+- **Clients (pi-ghosty) own at runtime**:
+  - which banks they use / when they call retain/recall/consolidate
+  - any dynamic per-request overrides (e.g. disable thinking for memory calls)
+
+Contract detail:
+- Clients may still create/update bank config via API, but the canonical desired-state lives here and is applied via scripts (idempotent).
 
 ### Agentmux contract
 - agentmux remains the cockpit for launching vLLM.
@@ -54,7 +58,7 @@ Runtime roots (durable + observable):
 
 ### Phase A — Postgres as a real system service (fresh DB)
 1) Use Fedora packages (not pg0).
-2) Initialize a brand new cluster in `~/data/hindsight-pg/`.
+2) Initialize a brand new Fedora PostgreSQL cluster.
 3) Configure listen on `127.0.0.1:5432`.
 4) Create:
    - role/user `hindsight` (password set)
@@ -63,20 +67,22 @@ Runtime roots (durable + observable):
 
 Result: stable DB aligned with Fedora upgrades (ICU/glibc), no bundled-binary rot.
 
-### Phase B — Hindsight API as its own server (systemd user service)
+### Phase B — Hindsight API as its own server (system service)
 1) Dedicated uv venv for Hindsight **in this repo**.
 2) Authoritative env file lives in-repo: `env/hindsight.env`.
-3) Add systemd user unit `hindsight-api.service` to run the API on `127.0.0.1:8888`.
-4) Logs go to `~/runs/hindsight/` (either journald-only or explicit file logs).
+3) Add systemd system unit `hindsight-api.service` to run the API on `127.0.0.1:8888`.
+4) Logs go to journald under the system service.
+5) Bank desired-state is stored in `config/banks/` and applied with a repo script (idempotent).
 
-Result: `systemctl --user start hindsight-api` brings it up independently of agentmux.
+Result: `systemctl start hindsight-api` brings it up independently of agentmux.
 
 ### Phase C — Stop managing Hindsight from agentmux
 1) Remove (or stop using) `engine="hindsight"` stacks for normal operation.
 2) Keep agentmux stacks for vLLM only.
-3) Provide a small healthcheck script in this repo to validate:
-   - DB reachable
-   - Hindsight `/health`
+3) Validate externally with standard tools:
+   - `systemctl status postgresql`
+   - `systemctl status hindsight-api`
+   - `curl http://127.0.0.1:8888/health`
    - vLLM `/health` (optional)
 
 ---

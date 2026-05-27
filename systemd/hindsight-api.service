@@ -1,18 +1,19 @@
-# systemd user unit
-# Install with: ./scripts/install-user-service.sh
-
 [Unit]
-Description=Hindsight API (local)
-After=network.target
+Description=Hindsight API (local system service)
+Documentation=file:/home/poop/code/dev/hindsight-highlights/docs/PLAN.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
 
 [Service]
 Type=simple
-WorkingDirectory=%h/code/dev/hindsight-highlights
-EnvironmentFile=%h/code/dev/hindsight-highlights/env/hindsight.env
-ExecStartPre=/usr/bin/mkdir -p %h/runs/hindsight
-ExecStart=%h/code/dev/hindsight-highlights/scripts/run-api.sh
+User=poop
+Group=poop
+WorkingDirectory=/home/poop/code/dev/hindsight-highlights
+SELinuxContext=-unconfined_u:unconfined_r:unconfined_t:s0
+ExecStart=/usr/bin/bash -lc 'set -a; source /home/poop/code/dev/hindsight-highlights/env/hindsight.env; set +a; exec /home/poop/code/dev/hindsight-highlights/.venv/bin/hindsight-api --host "$HINDSIGHT_API_HOST" --port "$HINDSIGHT_API_PORT"'
 Restart=on-failure
 RestartSec=2
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
