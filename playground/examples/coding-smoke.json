@@ -1,0 +1,12 @@
+{
+  "bank_id": "playground-coding-assistant",
+  "document_id": "playground-coding-smoke-001",
+  "context": "Hindsight playground smoke test for local coding-assistant memory configuration.",
+  "content": [
+    {"role": "user", "content": "Use uv for this repo and keep Hindsight service config in env/hindsight.env."},
+    {"role": "assistant", "content": "Confirmed. I will keep service defaults in env/hindsight.env and playground bank experiments under playground/."},
+    {"role": "user", "content": "The local Hindsight API should bind to 127.0.0.1:8888 and use vLLM at 127.0.0.1:8002/v1."}
+  ],
+  "recall_query": "What local Hindsight service and tooling preferences should I remember?",
+  "reflect_query": "Summarize the durable setup preferences for this Hindsight playground."
+}

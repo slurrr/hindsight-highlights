@@ -25,10 +25,13 @@ Used for fact extraction, entity resolution, mental model consolidation, and ans
 - Vertex AI
 - Groq
 - Ollama
+- Ollama Cloud
 - LM Studio
 - llama.cpp
 - MiniMax
 - DeepSeek
+- z.ai
+- opencode-go
 - Volcano Engine
 - OpenRouter
 - OpenAI Codex
@@ -59,6 +62,11 @@ See [Configuration](./configuration#built-in-llamacpp) for all options.
 Set `HINDSIGHT_API_LLM_PROVIDER=litellm` to use any model supported by [LiteLLM](https://docs.litellm.ai/docs/providers), including **Azure OpenAI**, **Together AI**, **Fireworks AI**, and many more. Model names use LiteLLM's provider prefix format (e.g., `azure/gpt-4o`).
 
 See [Configuration](./configuration#llm-provider) for setup examples.
+> **💡 LiteLLM Router (fallback chains, load-balancing, per-deployment limits)**
+> 
+Set `HINDSIGHT_API_LLM_PROVIDER=litellmrouter` to run the default LLM through [LiteLLM's Router](https://docs.litellm.ai/docs/routing) — ordered fallback across deployments, load-balanced same-tier routing, weighted picks, per-deployment `rpm`/`tpm` limits, and cooldowns are all available via the [`Router` config](https://docs.litellm.ai/docs/routing#fallbacks). Hindsight passes the JSON config through verbatim.
+
+See [Configuration](./configuration#llm-router-litellm-router) for setup.
 ### Benchmarks
 
 Not sure which model to use? The **[Model Leaderboard](https://benchmarks.hindsight.vectorize.io/)** benchmarks models across accuracy, speed, cost, and reliability for retain, reflect, and observation consolidation so you can pick the right trade-off for your use case.
@@ -98,10 +106,13 @@ Each provider has a recommended default model that's used when `HINDSIGHT_API_LL
 | `vertexai` | `gemini-2.0-flash-001` |
 | `groq` | `openai/gpt-oss-120b` |
 | `ollama` | `gemma3:12b` |
+| `ollama-cloud` | `gemma3:12b` |
 | `lmstudio` | `local-model` |
 | `llamacpp` | `gemma-4-e2b-it` (auto-downloaded GGUF) |
 | `minimax` | `MiniMax-M2.7` |
 | `deepseek` | `deepseek-v4-flash` |
+| `zai` | `glm-4.5-flash` |
+| `opencode-go` | `deepseek-v4-flash` |
 | `volcano` | `doubao-pro-32k` |
 | `openrouter` | `qwen/qwen3.5-9b` |
 | `openai-codex` | `gpt-5.4-mini` |
@@ -178,6 +189,11 @@ export HINDSIGHT_API_LLM_PROVIDER=ollama
 export HINDSIGHT_API_LLM_BASE_URL=http://localhost:11434/v1
 export HINDSIGHT_API_LLM_MODEL=llama3
 
+# Ollama Cloud (hosted Ollama endpoint, requires API key)
+export HINDSIGHT_API_LLM_PROVIDER=ollama-cloud
+export HINDSIGHT_API_LLM_API_KEY=your-ollama-cloud-api-key
+export HINDSIGHT_API_LLM_MODEL=gemma3:12b
+
 # LM Studio (local)
 export HINDSIGHT_API_LLM_PROVIDER=lmstudio
 export HINDSIGHT_API_LLM_BASE_URL=http://localhost:1234/v1
@@ -192,6 +208,16 @@ export HINDSIGHT_API_LLM_MODEL=MiniMax-M2.7
 export HINDSIGHT_API_LLM_PROVIDER=deepseek
 export HINDSIGHT_API_LLM_API_KEY=sk-xxxxxxxxxxxx
 export HINDSIGHT_API_LLM_MODEL=deepseek-v4-flash  # or deepseek-v4-pro / deepseek-chat / deepseek-reasoner
+
+# z.ai (Zhipu GLM series, OpenAI-compatible, https://z.ai)
+export HINDSIGHT_API_LLM_PROVIDER=zai
+export HINDSIGHT_API_LLM_API_KEY=your-zai-api-key
+export HINDSIGHT_API_LLM_MODEL=glm-4.5-flash  # or glm-4.5-air for the paid tier
+
+# opencode-go (OpenAI-compatible)
+export HINDSIGHT_API_LLM_PROVIDER=opencode-go
+export HINDSIGHT_API_LLM_API_KEY=your-opencode-go-api-key
+export HINDSIGHT_API_LLM_MODEL=deepseek-v4-flash
 
 # Vertex AI (Google Cloud)
 export HINDSIGHT_API_LLM_PROVIDER=vertexai
@@ -494,6 +520,7 @@ Reranks initial search results to improve precision.
 | `cohere` | Cohere rerank API | Production, high quality |
 | `zeroentropy` | ZeroEntropy rerank API (zerank-2) | Production, state-of-the-art accuracy |
 | `siliconflow` | SiliconFlow rerank API (Cohere-compatible `/rerank` endpoint) | Users in China or anyone on SiliconFlow's platform |
+| `alibaba` | Alibaba Cloud DashScope rerank API (qwen3-rerank) | Users on Alibaba Cloud / DashScope |
 | `tei` | HuggingFace Text Embeddings Inference | Production, self-hosted |
 | `flashrank` | FlashRank (lightweight, fast) | Resource-constrained environments |
 | `litellm` | LiteLLM proxy (unified gateway) | Multi-provider setups |
@@ -530,6 +557,14 @@ SiliconFlow hosts a range of open-weight rerankers behind a Cohere-compatible `/
 |-------|----------|
 | `BAAI/bge-reranker-v2-m3` | Multilingual, strong default |
 | `Qwen/Qwen3-Reranker-8B` | Larger, higher accuracy |
+
+### Alibaba Cloud Models
+
+Alibaba Cloud DashScope exposes `qwen3-rerank` via a Cohere-compatible `/reranks` endpoint:
+
+| Model | Use Case |
+|-------|----------|
+| `qwen3-rerank` | 100+ languages, default |
 
 ### LiteLLM Supported Providers
 
@@ -576,6 +611,11 @@ export HINDSIGHT_API_RERANKER_PROVIDER=siliconflow
 export HINDSIGHT_API_RERANKER_SILICONFLOW_API_KEY=your-api-key
 export HINDSIGHT_API_RERANKER_SILICONFLOW_MODEL=BAAI/bge-reranker-v2-m3  # default, can omit
 
+# Alibaba Cloud DashScope (qwen3-rerank)
+export HINDSIGHT_API_RERANKER_PROVIDER=alibaba
+export HINDSIGHT_API_RERANKER_ALIBABA_API_KEY=your-dashscope-api-key
+export HINDSIGHT_API_RERANKER_ALIBABA_MODEL=qwen3-rerank  # default, can omit
+
 # TEI (self-hosted)
 export HINDSIGHT_API_RERANKER_PROVIDER=tei
 export HINDSIGHT_API_RERANKER_TEI_URL=http://localhost:8081
@@ -593,4 +633,3 @@ export HINDSIGHT_API_RERANKER_PROVIDER=rrf
 ```
 
 See [Configuration](./configuration#reranker) for all options including Azure-hosted endpoints and batch settings.
-

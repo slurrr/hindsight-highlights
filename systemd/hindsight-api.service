@@ -9,8 +9,7 @@ After=network.target
 Type=simple
 WorkingDirectory=%h/code/dev/hindsight-highlights
 EnvironmentFile=%h/code/dev/hindsight-highlights/env/hindsight.env
-# Placeholder command (wire up after we decide exact venv + invocation)
-# ExecStart=%h/code/dev/hindsight-highlights/.venv/bin/hindsight-api --host ${HINDSIGHT_API_HOST} --port ${HINDSIGHT_API_PORT}
+ExecStart=%h/code/dev/hindsight-highlights/.venv/bin/hindsight-api --host ${HINDSIGHT_API_HOST} --port ${HINDSIGHT_API_PORT}
 Restart=on-failure
 RestartSec=2
 

@@ -1,0 +1,13 @@
+[project]
+name = "hindsight-highlights"
+version = "0.1.0"
+description = "Local Hindsight service ops and configuration playground"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "hindsight-api",
+  "hindsight-client",
+  "python-dotenv",
+]
+
+[tool.uv]
+package = false
