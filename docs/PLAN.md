@@ -46,7 +46,7 @@ Runtime roots (durable + observable):
   - any dynamic per-request overrides (e.g. disable thinking for memory calls)
 
 Contract detail:
-- Clients may still create/update bank config via API, but the canonical desired-state lives here and is applied via scripts (idempotent).
+- DB is the runtime source of truth. This repo is an editable snapshot/export. Client scripts SHOULD run a highlights pull after any config update to keep the snapshot current.
 
 ### Agentmux contract
 - agentmux remains the cockpit for launching vLLM.

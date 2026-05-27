@@ -1,17 +1,24 @@
-# Hindsight playground
+# Hindsight config control surface
 
-Editable control surface for the live Hindsight API served from this repo. Service launch/config stays in the repo root (`Makefile`, `env/`, `systemd/`, `scripts/`); bank templates and smoke scenarios stay here.
+Editable, versioned snapshot of Hindsight bank configuration.
+
+This directory is intended to be an **editable export** of what `pi-ghosty/scripts/memory-status.mjs` shows at runtime.
+The database remains the source of truth; these files are a human-friendly view that can be pushed back into the running service.
 
 ## Layout
 
-- `templates/`: preferred Hindsight bank-template manifests (`version: "1"`) with bank config, mental models, and directives.
-- `banks/`: legacy/simple memory-bank configuration JSON files. Keep only ad hoc per-bank experiments here.
-- `examples/`: small retain/recall/reflect scenarios for smoke tests and regression checks.
-- `../env/hindsight.env`: authoritative service-level config for the local API process.
-- `../scripts/playground.py`: helper CLI that validates/imports templates and runs scenarios against `HINDSIGHT_API_HOST`/`HINDSIGHT_API_PORT`.
-- `../scripts/run-api.sh`: foreground launcher for the live API.
-- `../Makefile`: top-level control surface for setup, launch, status, logs, health, and template operations.
+- `banks/`: per-bank JSON snapshots (pulled from the live API)
+- `templates/`: bank templates / mental models (optional)
+- `examples/`: example payloads for smoke testing (optional)
 
+## Workflow
+
+- Pull from the live service (DB → files):
+  - `uv run python scripts/pull_banks.py --banks <bank...>`
+- Push edits to the live service (files → DB):
+  - `uv run python scripts/push_banks.py --banks <bank...> --pull-after`
+
+To reduce human error, client-side scripts that update bank config should run a pull immediately after applying changes.
 ## Quick start
 
 ```bash
