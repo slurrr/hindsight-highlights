@@ -7,7 +7,11 @@ This is intentionally simple:
 - optionally pull immediately after to normalize/snapshot server-side defaults
 
 Usage:
-  uv run python scripts/push_banks.py --banks pi-ghosty-personal pi-ghosty-procedural --pull-after
+  # default: push then pull (self-normalize)
+  uv run python scripts/push_banks.py --banks pi-ghosty-personal pi-ghosty-procedural
+
+  # disable self-normalization:
+  uv run python scripts/push_banks.py --banks pi-ghosty-personal pi-ghosty-procedural --no-pull-after
 """
 
 from __future__ import annotations
@@ -49,7 +53,11 @@ def main() -> int:
     ap.add_argument("--base-url", default=_env_default_base_url())
     ap.add_argument("--banks", nargs="+", required=True)
     ap.add_argument("--in-dir", default="config/banks")
-    ap.add_argument("--pull-after", action="store_true")
+    ap.add_argument(
+        "--no-pull-after",
+        action="store_true",
+        help="Disable post-push pull (default behavior is to pull to snapshot server-normalized config)",
+    )
     args = ap.parse_args()
 
     base = args.base_url.rstrip("/")
@@ -72,7 +80,8 @@ def main() -> int:
         _patch_json(url, {"updates": updates})
         print(f"pushed {bank_id} <- {path}")
 
-    if args.pull_after:
+    if not args.no_pull_after:
+        
         # Import lazily to avoid circular dependency; just invoke pull script.
         import subprocess
 
