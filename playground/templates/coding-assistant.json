@@ -1,0 +1,45 @@
+{
+  "version": "1",
+  "bank": {
+    "retain_mission": "Extract durable engineering context: technical decisions, API contracts, architecture trade-offs, config choices, blockers, error messages, and user workflow preferences. Ignore greetings, transient command output unless it indicates a durable issue, and scheduling logistics.",
+    "retain_extraction_mode": "concise",
+    "observations_mission": "Synthesize stable project and user-workflow patterns from repeated evidence. Focus on durable preferences, recurring blockers, architectural direction, and contradictions with prior observations. Ignore one-off transient states.",
+    "reflect_mission": "You are a senior coding assistant. Ground answers in remembered project decisions and user preferences, flag uncertainty, and stay concise and actionable.",
+    "disposition_skepticism": 4,
+    "disposition_literalism": 4,
+    "disposition_empathy": 2,
+    "enable_observations": true,
+    "entities_allow_free_form": true,
+    "entity_labels": ["project_area", "status", "tool", "service", "decision"]
+  },
+  "mental_models": [
+    {
+      "id": "local-hindsight-setup",
+      "name": "Local Hindsight Setup",
+      "source_query": "What are the durable setup decisions, service boundaries, ports, and tooling preferences for the local Hindsight service?",
+      "tags": ["playground", "setup"],
+      "max_tokens": 2048,
+      "trigger": {
+        "refresh_after_consolidation": true,
+        "fact_types": ["world", "experience", "observation"],
+        "exclude_mental_models": true
+      }
+    }
+  ],
+  "directives": [
+    {
+      "name": "keep-config-organized",
+      "content": "Keep service-level defaults in env/hindsight.env. Keep experimental bank templates and scenarios under playground/. Do not scatter Hindsight config across unrelated repos without an explicit contract.",
+      "priority": 10,
+      "is_active": true,
+      "tags": ["playground", "config"]
+    },
+    {
+      "name": "prefer-safe-memory-extraction",
+      "content": "When retaining coding-session data, prefer durable decisions, blockers, interfaces, and user preferences. Avoid storing giant raw tool outputs or transient command noise unless they explain a durable issue.",
+      "priority": 8,
+      "is_active": true,
+      "tags": ["playground", "memory-hygiene"]
+    }
+  ]
+}
