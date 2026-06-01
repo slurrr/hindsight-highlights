@@ -120,6 +120,16 @@ uv run python scripts/memory_write_audit.py \
 
 The report includes compact bank stats, recent `world` facts, recent `experience` facts, recent `observation` consolidations, and mental model metadata if any models exist.
 
+## Reflect / mental model planning
+
+Current implementation plan:
+
+```bash
+less docs/reflect-mental-model-plan.md
+```
+
+Reflect and mental models are separate from automatic observation consolidation: `reflect_mission` configures explicit reflect calls, while mental models are saved/curated reflect responses that must be created through the mental-model API/client flow.
+
 ## Where to look for evidence
 
 - **Service/runtime logs:** journald (`journalctl -u hindsight-api`)
