@@ -2,9 +2,9 @@
   "bank_id": "local-agent-user-profile",
   "name": "Local Agent User Profile",
   "config": {
-    "retain_mission": "Extract durable user-specific memory that should personalize future work: stated goals, preferences, constraints, communication style, working style, interests, relationships, commitments, deadlines, routines, recurring responsibilities, and explicit feedback about agent behavior. Extract outputs from scheduled assistants only when they reveal a durable preference, commitment, standing task, or user-relevant pattern. Ignore greetings, small talk, one-off transient moods, raw notification noise, and implementation details that belong in project or procedural banks.",
+    "retain_mission": "This bank is ONLY for durable personal profile facts about Seth, the human user. Extract a memory only when the fact is directly about Seth or Seth's explicit preferences, goals, constraints, communication style, workflow style, interests, relationships, commitments, routines, recurring responsibilities, or feedback about assistant behavior. Positive examples: Seth prefers concise focused replies; Seth wants delegation routed through ASS; Seth dislikes duplicated transcript noise; Seth is evaluating pi-collab as a personal multi-agent framework. Hard negative rule: if a transcript chunk contains no durable fact about Seth or Seth's preferences, extract nothing for this bank. Do not extract assistant actions, tool calls, commands, files, delegated task details, implementation facts, framework architecture, session lifecycle events, debug logs, worker reports, or procedural rules; those belong in product, implementation, or procedural banks. Extract outputs from scheduled assistants only when they reveal a durable Seth preference, commitment, standing task, or user-relevant pattern.",
     "retain_extraction_mode": "concise",
-    "observations_mission": "Synthesize stable user profile observations from repeated evidence: preferences, priorities, routines, communication style, trusted sources, recurring responsibilities, long-running goals, and contradictions or changes over time. Focus on durable patterns that should influence personalization. Ignore one-off events unless they update a standing commitment or preference.",
+    "observations_mission": "Synthesize stable observations only about Seth's profile: preferences, priorities, routines, communication style, trusted sources, recurring responsibilities, long-running goals, workflow patterns, and feedback about assistant behavior. If source facts are not directly about Seth or Seth's preferences, do not create a user-profile observation. Ignore assistant/tool actions, implementation work, framework procedures, worker reports, session lifecycle events, and one-off project/debug events unless Seth explicitly states a durable preference or feedback through them.",
     "reflect_mission": "You are the memory perspective for the main user-facing agent serving one user. Use remembered preferences, goals, constraints, routines, and feedback to help personalize responses and decide what matters. Be warm but concise. Flag uncertainty and stale or conflicting profile information instead of over-assuming.",
     "disposition_skepticism": 3,
     "disposition_literalism": 3,
@@ -14,18 +14,18 @@
     "entity_labels": [
       {
         "key": "profile_area",
-        "description": "Which durable part of the user's profile this memory informs.",
+        "description": "Which durable part of Seth's profile this memory informs.",
         "type": "multi-values",
         "tag": true,
         "values": [
           {"value": "goals", "description": "Long-running personal, creative, product, or professional goals"},
           {"value": "preferences", "description": "Likes, dislikes, defaults, and explicit choices"},
           {"value": "communication_style", "description": "Tone, format, cadence, and interaction preferences"},
-          {"value": "workflow", "description": "How the user likes work planned, delegated, reviewed, or summarized"},
+          {"value": "workflow", "description": "How Seth likes work planned, delegated, reviewed, or summarized"},
           {"value": "commitments", "description": "Responsibilities, promises, deadlines, or recurring obligations"},
           {"value": "relationships", "description": "Important people, teams, communities, or social context"},
-          {"value": "interests", "description": "Topics and domains the user follows or cares about"},
-          {"value": "assistant_feedback", "description": "User feedback about agent behavior or memory behavior"}
+          {"value": "interests", "description": "Topics and domains Seth follows or cares about"},
+          {"value": "assistant_feedback", "description": "Seth's feedback about agent behavior or memory behavior"}
         ]
       },
       {
@@ -53,7 +53,7 @@
         ]
       }
     ],
-    "entities_allow_free_form": true,
+    "entities_allow_free_form": false,
     "recall_budget_function": "fixed",
     "recall_budget_fixed_low": 80,
     "recall_budget_fixed_mid": 250,
