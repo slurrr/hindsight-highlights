@@ -104,3 +104,23 @@ Do not over-tune these until more diverse non-pi-collab sessions exist.
 Current debug memory rendering not serializing into the retained transcript is good.
 
 Later improvement: prune recalled memories from prior turns (`n - 1` recall blocks) before retain so the session transcript does not recursively re-retain older memory. This is lower priority than user-profile selectivity because current bad examples are primary transcript facts, not recalled-memory echoes.
+
+## Write-audit workflow
+
+Use the read-only audit script to inspect latest retained writes and consolidation output:
+
+```bash
+uv run python scripts/memory_write_audit.py
+uv run python scripts/memory_write_audit.py --banks local-agent-user-profile --limit 10
+uv run python scripts/memory_write_audit.py --output /home/poop/runs/hindsight-highlights/memory-write-audit.md
+```
+
+The report includes, per bank:
+
+- compact bank stats
+- recent `world` facts
+- recent `experience` facts
+- recent `observation` consolidations
+- mental model metadata, if present
+
+This is intentionally not a recall test. It is for evaluating write quality after bank config, model, transcript, or prompt changes.
