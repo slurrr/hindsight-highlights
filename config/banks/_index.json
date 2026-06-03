@@ -1,0 +1,6 @@
+{
+  "banks": {
+    "local-agent-user-profile": "config/banks/local-agent-user-profile.json"
+  },
+  "base_url": "http://127.0.0.1:8888"
+}

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UNIT_DIR="$HOME/.config/systemd/user"
-UNIT_SRC="$ROOT/systemd/hindsight-api.service"
+UNIT_SRC="$ROOT/systemd/user/hindsight-api.service"
 UNIT_DST="$UNIT_DIR/hindsight-api.service"
 
 mkdir -p "$UNIT_DIR"

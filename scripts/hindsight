@@ -1,0 +1,350 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+UNIT_NAME="hindsight-api"
+UNIT_PATH="$HOME/.config/systemd/user/${UNIT_NAME}.service"
+SERVICE_ENV_FILE="$ROOT/env/hindsight.env"
+LAUNCH_ENV_FILE="$ROOT/env/hindsight.launch.env"
+PYTHON_BIN="$ROOT/.venv/bin/python"
+LLM_MANAGER_VARS=(
+  HINDSIGHT_LLM_MODEL
+  HINDSIGHT_LLM_STACK
+  HINDSIGHT_LLM_BASE_URL
+  HINDSIGHT_LLM_START_CMD
+  HINDSIGHT_LLM_HEALTH_URL
+  HINDSIGHT_LLM_START_TIMEOUT
+  HINDSIGHT_LLM_START_INTERVAL
+  HINDSIGHT_LLM_SKIP_START
+  HINDSIGHT_LLM_WAIT_FOR_HEALTH
+)
+
+usage() {
+  cat <<'EOF'
+Usage: hindsight <command> [options]
+
+Commands:
+  up [--llm [STACK]] [--llm-stack STACK]
+     [--llm-model MODEL] [--llm-base-url URL]
+     [--llm-health-url URL] [--llm-start-timeout SEC]
+     [--llm-start-interval SEC] [--skip-llm-start] [--no-wait-for-llm]
+  down
+  restart
+  status
+  logs [-f]
+  doctor
+  run [launch-wrapper options...]
+  install-service
+  install-command
+EOF
+}
+
+fail() {
+  echo "hindsight: $*" >&2
+  exit 1
+}
+
+require_file() {
+  local path="$1"
+  [[ -f "$path" ]] || fail "missing required file: $path"
+}
+
+require_unit() {
+  [[ -f "$UNIT_PATH" ]] || fail "user unit not installed: $UNIT_PATH (run: hindsight install-service)"
+}
+
+systemctl_user() {
+  systemctl --user "$@"
+}
+
+journalctl_user() {
+  journalctl --user -u "$UNIT_NAME" "$@"
+}
+
+unset_llm_env() {
+  systemctl_user unset-environment "${LLM_MANAGER_VARS[@]}" >/dev/null 2>&1 || true
+}
+
+set_transient_env() {
+  local -a pairs=()
+  if [[ -n "${HINDSIGHT_LLM_MODEL:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_MODEL=${HINDSIGHT_LLM_MODEL}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_STACK:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_STACK=${HINDSIGHT_LLM_STACK}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_BASE_URL:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_BASE_URL=${HINDSIGHT_LLM_BASE_URL}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_START_CMD:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_START_CMD=${HINDSIGHT_LLM_START_CMD}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_HEALTH_URL:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_HEALTH_URL=${HINDSIGHT_LLM_HEALTH_URL}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_START_TIMEOUT:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_START_TIMEOUT=${HINDSIGHT_LLM_START_TIMEOUT}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_START_INTERVAL:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_START_INTERVAL=${HINDSIGHT_LLM_START_INTERVAL}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_SKIP_START:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_SKIP_START=${HINDSIGHT_LLM_SKIP_START}")
+  fi
+  if [[ -n "${HINDSIGHT_LLM_WAIT_FOR_HEALTH:-}" ]]; then
+    pairs+=("HINDSIGHT_LLM_WAIT_FOR_HEALTH=${HINDSIGHT_LLM_WAIT_FOR_HEALTH}")
+  fi
+
+  if ((${#pairs[@]})); then
+    systemctl_user set-environment "${pairs[@]}"
+  fi
+  trap 'unset_llm_env' EXIT
+}
+
+parse_up_args() {
+  local llm_requested=0
+  local llm_stack="${HINDSIGHT_LLM_DEFAULT_STACK:-mem_gem_hsx}"
+
+  HINDSIGHT_LLM_MODEL=""
+  HINDSIGHT_LLM_STACK=""
+  HINDSIGHT_LLM_BASE_URL=""
+  HINDSIGHT_LLM_START_CMD=""
+  HINDSIGHT_LLM_HEALTH_URL=""
+  HINDSIGHT_LLM_START_TIMEOUT=""
+  HINDSIGHT_LLM_START_INTERVAL=""
+  HINDSIGHT_LLM_SKIP_START="1"
+  HINDSIGHT_LLM_WAIT_FOR_HEALTH="1"
+
+  while (($#)); do
+    case "$1" in
+      --llm)
+        llm_requested=1
+        shift
+        if (($#)) && [[ "${1:-}" != --* ]]; then
+          llm_stack="$1"
+          shift
+        fi
+        ;;
+      --llm-stack)
+        llm_requested=1
+        llm_stack="${2:?missing value for --llm-stack}"
+        shift 2
+        ;;
+      --llm-model)
+        HINDSIGHT_LLM_MODEL="${2:?missing value for --llm-model}"
+        shift 2
+        ;;
+      --llm-base-url)
+        HINDSIGHT_LLM_BASE_URL="${2:?missing value for --llm-base-url}"
+        shift 2
+        ;;
+      --llm-health-url)
+        HINDSIGHT_LLM_HEALTH_URL="${2:?missing value for --llm-health-url}"
+        shift 2
+        ;;
+      --llm-start-timeout)
+        HINDSIGHT_LLM_START_TIMEOUT="${2:?missing value for --llm-start-timeout}"
+        shift 2
+        ;;
+      --llm-start-interval)
+        HINDSIGHT_LLM_START_INTERVAL="${2:?missing value for --llm-start-interval}"
+        shift 2
+        ;;
+      --skip-llm-start)
+        HINDSIGHT_LLM_SKIP_START=1
+        shift
+        ;;
+      --no-wait-for-llm)
+        HINDSIGHT_LLM_WAIT_FOR_HEALTH=0
+        shift
+        ;;
+      --wait-for-llm)
+        HINDSIGHT_LLM_WAIT_FOR_HEALTH=1
+        shift
+        ;;
+      --)
+        shift
+        if (($#)); then
+          fail "hindsight up does not accept forwarded args"
+        fi
+        ;;
+      *)
+        fail "unknown hindsight up option: $1"
+        ;;
+    esac
+  done
+
+  if [[ "$llm_requested" -eq 1 ]]; then
+    HINDSIGHT_LLM_STACK="$llm_stack"
+    HINDSIGHT_LLM_START_CMD='$HOME/.local/bin/agentmux up "${HINDSIGHT_LLM_STACK}"'
+    HINDSIGHT_LLM_SKIP_START=0
+  fi
+}
+
+print_doctor_summary() {
+  local active_state="$1"
+  local enabled_state="$2"
+  local health_json="$3"
+
+  printf '%s' "$health_json" | "$PYTHON_BIN" -c "import json,sys; active=sys.argv[1]; enabled=sys.argv[2]; checks=json.load(sys.stdin); mark=lambda item: 'ok' if item.get('ok') else 'fail'; print('hindsight: unit={} enabled={} postgres={} api={} vllm={}'.format(active, enabled, mark(checks.get('postgres_tcp', {})), mark(checks.get('hindsight_api_health', {})), mark(checks.get('vllm_health', {}))))" "$active_state" "$enabled_state"
+}
+
+get_journal_cursor() {
+  local since_ts="$1"
+  journalctl --user -u "$UNIT_NAME" --since "$since_ts" --no-pager --show-cursor -n 0 -o cat 2>/dev/null \
+    | awk -F': ' '/^-- cursor: / {print $2; exit}'
+}
+
+follow_until_startup_complete() {
+  local since_ts="$1"
+  local timeout_seconds="${2:-120}"
+  local deadline=$((SECONDS + timeout_seconds))
+  local cursor=""
+  local out=""
+  local line=""
+
+  cursor="$(get_journal_cursor "$since_ts" || true)"
+
+  while (( SECONDS < deadline )); do
+    if [[ -n "$cursor" ]]; then
+      out="$(journalctl --user -u "$UNIT_NAME" --after-cursor "$cursor" --no-pager --show-cursor -o cat 2>/dev/null || true)"
+    else
+      out="$(journalctl --user -u "$UNIT_NAME" --since "$since_ts" --no-pager --show-cursor -o cat 2>/dev/null || true)"
+    fi
+
+    while IFS= read -r line; do
+      if [[ "$line" == "-- cursor: "* ]]; then
+        cursor="${line#-- cursor: }"
+        continue
+      fi
+
+      [[ -n "$line" ]] && printf '%s\n' "$line"
+      if [[ "$line" == *"Application startup complete"* ]]; then
+        return 0
+      fi
+    done <<<"$out"
+
+    sleep 1
+  done
+
+  return 1
+}
+
+wait_for_service_ready() {
+  local timeout_seconds="${1:-60}"
+  local deadline=$((SECONDS + timeout_seconds))
+  local state=""
+
+  while (( SECONDS < deadline )); do
+    state="$(systemctl_user is-active "$UNIT_NAME" 2>/dev/null || true)"
+    case "$state" in
+      active|reloading)
+        return 0
+        ;;
+      failed)
+        return 1
+        ;;
+      inactive|activating|deactivating|unknown)
+        sleep 1
+        ;;
+      *)
+        sleep 1
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+cmd="${1:-}"
+[[ -n "$cmd" ]] || { usage; exit 1; }
+shift || true
+
+case "$cmd" in
+  up)
+    require_unit
+    unset_llm_env
+    parse_up_args "$@"
+    set_transient_env
+
+    current_state="$(systemctl_user is-active "$UNIT_NAME" 2>/dev/null || true)"
+    if [[ "$current_state" == "active" ]]; then
+      echo "hindsight: already active"
+      exit 0
+    fi
+
+    since_ts="$(date -d '5 seconds ago' '+%Y-%m-%d %H:%M:%S')"
+    systemctl_user start "$UNIT_NAME"
+    echo "hindsight: waiting for startup complete"
+    if ! follow_until_startup_complete "$since_ts" 120; then
+      systemctl_user status "$UNIT_NAME" --no-pager >&2 || true
+      fail "hindsight did not print 'Application startup complete' in time"
+    fi
+    ;;
+  down)
+    require_unit
+    systemctl_user stop "$UNIT_NAME"
+    ;;
+  restart)
+    require_unit
+    systemctl_user restart "$UNIT_NAME"
+    if ! wait_for_service_ready 120; then
+      systemctl_user status "$UNIT_NAME" --no-pager >&2 || true
+      fail "hindsight failed to restart cleanly"
+    fi
+    echo "hindsight: restarted"
+    ;;
+  status)
+    require_unit
+    systemctl_user status "$UNIT_NAME" --no-pager
+    ;;
+  logs)
+    require_unit
+    if [[ "${1:-}" == "-f" || "${1:-}" == "--follow" ]]; then
+      shift || true
+      journalctl_user -f "$@"
+    else
+      journalctl_user -n 200 --no-pager "$@"
+    fi
+    ;;
+  doctor)
+    require_file "$SERVICE_ENV_FILE"
+    require_file "$LAUNCH_ENV_FILE"
+    [[ -x "$PYTHON_BIN" ]] || fail "missing virtualenv python: $PYTHON_BIN (run: uv sync)"
+    require_unit
+
+    enabled_state="$(systemctl_user is-enabled "$UNIT_NAME" 2>/dev/null || true)"
+    active_state="$(systemctl_user is-active "$UNIT_NAME" 2>/dev/null || true)"
+
+    health_rc=0
+    if health_json="$($PYTHON_BIN "$ROOT/scripts/healthcheck.py" 2>/dev/null)"; then
+      :
+    else
+      health_rc=$?
+    fi
+
+    if [[ -z "$health_json" ]]; then
+      fail "unable to read healthcheck output"
+    fi
+
+    print_doctor_summary "$active_state" "$enabled_state" "$health_json"
+    exit "$health_rc"
+    ;;
+  run)
+    exec "$ROOT/scripts/run-api.sh" "$@"
+    ;;
+  install-service)
+    exec "$ROOT/scripts/install-user-service.sh"
+    ;;
+  install-command)
+    exec "$ROOT/scripts/install-user-command.sh"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

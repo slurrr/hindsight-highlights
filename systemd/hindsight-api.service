@@ -11,6 +11,10 @@ User=poop
 Group=poop
 WorkingDirectory=/home/poop/code/dev/hindsight-highlights
 SELinuxContext=-unconfined_u:unconfined_r:unconfined_t:s0
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hindsight-api
 ExecStart=/usr/bin/bash -lc 'set -a; source /home/poop/code/dev/hindsight-highlights/env/hindsight.env; set +a; exec /home/poop/code/dev/hindsight-highlights/.venv/bin/hindsight-api --host "$HINDSIGHT_API_HOST" --port "$HINDSIGHT_API_PORT"'
 Restart=on-failure
 RestartSec=2

@@ -1,4 +1,4 @@
-# Hindsight systemd install notes
+# Hindsight user-service install notes
 
 This repo owns Hindsight service config. Postgres is owned by Fedora system packages.
 
@@ -24,7 +24,11 @@ Set the `hindsight` role password to match `env/hindsight.env` before starting H
 
 ## Hindsight API
 
-The system service sources `/home/poop/code/dev/hindsight-highlights/env/hindsight.env` and runs `hindsight-api` from `/home/poop/code/dev/hindsight-highlights/.venv`.
+The user service calls `scripts/run-api.sh`, which layers:
+
+- `env/hindsight.env` for service/runtime defaults
+- `env/hindsight.launch.env` for launch-profile defaults
+- `env/hindsight.local.env` for optional local overrides
 
 Create/update the dedicated venv:
 
@@ -34,18 +38,27 @@ uv venv --python python3.13 .venv
 uv pip install --python .venv hindsight-api
 ```
 
-Install/start the system service:
+Install the user unit:
 
 ```bash
-sudo cp systemd/hindsight-api.service /etc/systemd/system/hindsight-api.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now hindsight-api
+hindsight install-service
 ```
 
-Validate:
+Install the user command:
 
 ```bash
-systemctl status postgresql
-systemctl status hindsight-api
-curl http://127.0.0.1:8888/health
+hindsight install-command
 ```
+
+Start manually when you want it:
+
+```bash
+hindsight up
+hindsight up --llm
+hindsight status
+hindsight logs -f
+```
+
+`hindsight up` follows logs until it sees `Application startup complete`.
+
+The unit is intentionally not enabled at boot.

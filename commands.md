@@ -1,85 +1,69 @@
 # Hindsight Highlights command surface
 
-This repo uses **systemd** for the Hindsight API.
+This repo uses a **manual `systemd --user` service** plus a `hindsight` command wrapper for the Hindsight API.
 
 - **Service/runtime logs:** journald
 - **Run artifacts / experiments:** `~/runs/hindsight-highlights/`
-- **Legacy unbounded file log:** `/home/poop/runs/hindsight/api.log`
 
 ## Service lifecycle
 
-### Install the unit
+### Install the user unit
 ```bash
-sudo cp systemd/hindsight-api.service /etc/systemd/system/hindsight-api.service
+hindsight install-service
 ```
 
-### Reload systemd after changing the unit file
+### Install the user command
 ```bash
-sudo systemctl daemon-reload
-```
-
-### Enable at boot
-```bash
-sudo systemctl enable hindsight-api
-```
-
-### Enable and start now
-```bash
-sudo systemctl enable --now hindsight-api
+hindsight install-command
 ```
 
 ### Start / stop / restart
 ```bash
-sudo systemctl start hindsight-api
-sudo systemctl stop hindsight-api
-sudo systemctl restart hindsight-api
-```
-
-### Kill it if needed
-```bash
-sudo systemctl stop hindsight-api
-# if it is hung and you really need to force it:
-sudo systemctl kill --signal=SIGKILL hindsight-api
+hindsight up
+hindsight down
+hindsight restart
 ```
 
 ### Check status
 ```bash
-sudo systemctl status hindsight-api --no-pager
+hindsight status
 ```
 
-## Journald logs
-
-### Live logs
+### Logs
 ```bash
-sudo journalctl -u hindsight-api -f
+hindsight logs -f
+hindsight logs
 ```
 
-### Recent logs
+## Launcher wrapper
+
+Start Hindsight directly with the repo launcher:
+
 ```bash
-sudo journalctl -u hindsight-api -n 200 --no-pager
+./scripts/run-api.sh
 ```
 
-### Narrow by time window
+Start Hindsight without vLLM:
+
 ```bash
-sudo journalctl -u hindsight-api --since "2026-05-31 15:20" --until "2026-05-31 15:26" --no-pager
+hindsight up
 ```
 
-### Raw log lines only
+`hindsight up` follows the unit logs until it sees `Application startup complete`.
+
+Start Hindsight and also launch a memory stack:
+
 ```bash
-sudo journalctl -u hindsight-api -o cat
+hindsight up --llm          # defaults to mem_gem_hsx
+hindsight up --llm mem_gem_hsx
+hindsight up --llm other_stack_name
 ```
 
-### Log to a file if needed
-```bash
-sudo journalctl -u hindsight-api --since "today" --no-pager > /home/poop/runs/hindsight-highlights/hindsight-api-$(date -u +%Y%m%dT%H%M%SZ).log
-```
+Useful launch overrides live in:
 
-### Journal size / retention
-```bash
-sudo journalctl --disk-usage
-sudo journalctl --vacuum-time=7d
-sudo journalctl --vacuum-size=500M
-```
+- `env/hindsight.env`
+- `env/hindsight.launch.env`
+- `env/hindsight.local.env` (gitignored)
 
 ## Runtime evidence
 
@@ -132,6 +116,6 @@ Reflect and mental models are separate from automatic observation consolidation:
 
 ## Where to look for evidence
 
-- **Service/runtime logs:** journald (`journalctl -u hindsight-api`)
+- **Service/runtime logs:** journald (`journalctl --user -u hindsight-api`)
 - **Canary run evidence:** `~/runs/hindsight-highlights/`
 - **Actual retained memories/facts:** Hindsight database / API, not journald

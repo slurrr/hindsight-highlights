@@ -1,0 +1,19 @@
+[Unit]
+Description=Hindsight API (user service)
+Documentation=file:/home/poop/code/dev/hindsight-highlights/docs/PLAN.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/code/dev/hindsight-highlights
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hindsight-api
+ExecStart=%h/code/dev/hindsight-highlights/scripts/run-api.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -27,13 +27,13 @@ Contains:
   - `config/banks/`: bank definitions (JSON)
   - `config/templates/`: known-good bank templates (JSON)
   - `config/examples/`: example payloads / smoke inputs
-- `scripts/`: thin operational commands (apply config, healthcheck, reset)
-- `systemd/`: system unit files and install notes
+- `scripts/`: thin operational commands (launch wrapper, apply config, healthcheck, reset)
+- `systemd/`: user unit files and install notes
 - `docs/`: durable docs/decisions
 
 Runtime roots (durable + observable):
 - DB data: Fedora `postgresql.service` package default (`/var/lib/pgsql/data`)
-- Logs: journald for `postgresql.service` and `hindsight-api.service`
+- Logs: journald for `postgresql.service` and `hindsight-api.service` (user unit)
 - Caches: under `~/cache/` (via env)
 
 ### Ownership contract (explicit, avoids split-brain)
@@ -67,14 +67,16 @@ Contract detail:
 
 Result: stable DB aligned with Fedora upgrades (ICU/glibc), no bundled-binary rot.
 
-### Phase B — Hindsight API as its own server (system service)
+### Phase B — Hindsight API as its own server (manual user service)
 1) Dedicated uv venv for Hindsight **in this repo**.
-2) Authoritative env file lives in-repo: `env/hindsight.env`.
-3) Add systemd system unit `hindsight-api.service` to run the API on `127.0.0.1:8888`.
-4) Logs go to journald under the system service.
-5) Bank desired-state is stored in `config/banks/` and applied with a repo script (idempotent).
+2) Authoritative service env lives in-repo: `env/hindsight.env`.
+3) Launch profile defaults live in `env/hindsight.launch.env`.
+4) Add a `systemd --user` unit `hindsight-api.service` for manual start/stop/restart only.
+5) Expose a `hindsight` command wrapper for `up/down/status/logs/doctor`.
+6) Logs go to journald under the user service.
+7) Bank desired-state is stored in `config/banks/` and applied with a repo script (idempotent).
 
-Result: `systemctl start hindsight-api` brings it up independently of agentmux.
+Result: `hindsight up` brings it up independently of agentmux, without boot enablement.
 
 ### Phase C — Stop managing Hindsight from agentmux
 1) Remove (or stop using) `engine="hindsight"` stacks for normal operation.
@@ -110,7 +112,7 @@ Based on what we learned:
 ## Cutover plan (low drama)
 1) Stand up fresh Postgres + fresh Hindsight API at the same ports.
 2) Point clients to the new Hindsight service URL (still `127.0.0.1:8888`).
-3) Keep agentmux launching only vLLM.
+3) Keep agentmux (or the launch wrapper) handling only vLLM.
 4) Run a small end-to-end sanity pass:
    - recall works
    - retain writes a couple units
@@ -121,5 +123,6 @@ Based on what we learned:
 
 ## Open decisions (intentionally minimal)
 - Postgres: **system service** (chosen)
+- Hindsight API: **manual user service** (chosen)
 - Env config: **in repo** (chosen)
 
