@@ -7,11 +7,14 @@ This is intentionally simple:
 - optionally pull immediately after to normalize/snapshot server-side defaults
 
 Usage:
-  # default: push then pull (self-normalize)
-  uv run python scripts/push_banks.py --banks pi-ghosty-personal pi-ghosty-procedural
+  # default: push all local-agent banks, pull normalized configs, then verify all
+  uv run python scripts/push_banks.py
 
-  # disable self-normalization:
-  uv run python scripts/push_banks.py --banks pi-ghosty-personal pi-ghosty-procedural --no-pull-after
+  # push selected banks, then verify all local-agent banks so unrelated drift is caught
+  uv run python scripts/push_banks.py --banks local-agent-user-profile
+
+  # disable self-normalization and/or verification when needed:
+  uv run python scripts/push_banks.py --no-pull-after --no-verify
 """
 
 from __future__ import annotations
@@ -23,6 +26,15 @@ import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+
+DEFAULT_BANKS = [
+    "local-agent-user-profile",
+    "local-agent-product-strategy",
+    "local-agent-framework-procedural",
+    "local-agent-implementation-work",
+    "local-agent-assistant-ops",
+]
 
 
 def _env_default_base_url() -> str:
@@ -51,12 +63,17 @@ def _patch_json(url: str, payload: object, timeout: float = 60.0) -> object:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base-url", default=_env_default_base_url())
-    ap.add_argument("--banks", nargs="+", required=True)
+    ap.add_argument("--banks", nargs="+", default=DEFAULT_BANKS, help="Banks to push. Defaults to all local-agent banks.")
     ap.add_argument("--in-dir", default="config/banks")
     ap.add_argument(
         "--no-pull-after",
         action="store_true",
         help="Disable post-push pull (default behavior is to pull to snapshot server-normalized config)",
+    )
+    ap.add_argument(
+        "--no-verify",
+        action="store_true",
+        help="Disable post-push drift verification (default verifies all local-agent banks, not only pushed banks)",
     )
     args = ap.parse_args()
 
@@ -80,13 +97,17 @@ def main() -> int:
         _patch_json(url, {"updates": updates})
         print(f"pushed {bank_id} <- {path}")
 
-    if not args.no_pull_after:
-        
-        # Import lazily to avoid circular dependency; just invoke pull script.
-        import subprocess
+    # Import lazily to avoid startup cost for callers that only need patching.
+    import subprocess
 
+    if not args.no_pull_after:
         subprocess.check_call(
             [sys.executable, str(Path(__file__).parent / "pull_banks.py"), "--base-url", base, "--banks", *args.banks]
+        )
+
+    if not args.no_verify:
+        subprocess.check_call(
+            [sys.executable, str(Path(__file__).parent / "check_bank_config_drift.py"), "--base-url", base, "--banks", *DEFAULT_BANKS]
         )
 
     return 0

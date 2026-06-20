@@ -81,7 +81,14 @@ less /home/poop/runs/hindsight/api.log
 
 Read-only workflow for checking latest retained facts and consolidation output. This is for write quality, not recall quality.
 
-### Verify running bank config matches repo files
+### Apply all bank configs and verify drift
+```bash
+uv run python scripts/push_banks.py --no-pull-after
+```
+
+`push_banks.py` now defaults to all local-agent banks and verifies all critical bank config after every push.
+
+### Verify running bank config matches repo files without changing anything
 ```bash
 uv run python scripts/check_bank_config_drift.py
 ```

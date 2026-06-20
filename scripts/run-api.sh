@@ -42,6 +42,34 @@ start_background_command() {
   echo $!
 }
 
+discover_openai_model() {
+  local base_url="$1"
+  local models_url="${base_url%/}/models"
+
+  "$ROOT/.venv/bin/python" - "$models_url" <<'PY'
+import json
+import sys
+import urllib.request
+
+url = sys.argv[1]
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+except Exception as exc:
+    raise SystemExit(f"failed to query {url}: {exc}")
+
+data = payload.get("data")
+if not isinstance(data, list) or not data:
+    raise SystemExit(f"no models returned by {url}")
+
+model_id = data[0].get("id") if isinstance(data[0], dict) else None
+if not model_id:
+    raise SystemExit(f"first model from {url} has no id")
+
+print(model_id)
+PY
+}
+
 if [[ ! -d "$ROOT/.venv" ]]; then
   echo "missing .venv; run: uv sync" >&2
   exit 1
@@ -65,6 +93,10 @@ LLM_START_TIMEOUT="${HINDSIGHT_LLM_START_TIMEOUT:-600}"
 LLM_START_INTERVAL="${HINDSIGHT_LLM_START_INTERVAL:-2}"
 LLM_SKIP_START="${HINDSIGHT_LLM_SKIP_START:-0}"
 WAIT_FOR_LLM="${HINDSIGHT_LLM_WAIT_FOR_HEALTH:-1}"
+AUTO_MODEL_POLL_INTERVAL="${HINDSIGHT_LLM_AUTO_MODEL_POLL_INTERVAL:-10}"
+AUTO_MODEL_RESTART_ON_CHANGE="${HINDSIGHT_LLM_AUTO_MODEL_RESTART_ON_CHANGE:-1}"
+APPLY_BANKS_ON_START="${HINDSIGHT_APPLY_BANKS_ON_START:-1}"
+APPLY_BANKS_TIMEOUT="${HINDSIGHT_APPLY_BANKS_TIMEOUT:-60}"
 
 FORWARD_ARGS=()
 while (($#)); do
@@ -109,6 +141,14 @@ while (($#)); do
       WAIT_FOR_LLM=1
       shift
       ;;
+    --no-apply-banks)
+      APPLY_BANKS_ON_START=0
+      shift
+      ;;
+    --apply-banks)
+      APPLY_BANKS_ON_START=1
+      shift
+      ;;
     --)
       shift
       FORWARD_ARGS+=("$@")
@@ -122,16 +162,21 @@ while (($#)); do
 done
 
 # Hindsight service config provides the main LLM settings. Launch-time
-# LLM variables are only needed when the wrapper is also starting vLLM.
+# LLM variables are only needed when the wrapper is also starting an LLM backend.
+# Set HINDSIGHT_API_LLM_MODEL=auto (or pass --llm-model auto) to discover the
+# served model from the OpenAI-compatible /v1/models endpoint after the backend
+# is available. This keeps 127.0.0.1:8002 as a stable memory LLM slot without
+# requiring every backend to share a fake alias.
 
-if [[ -n "$LLM_MODEL" ]]; then
+LLM_MODEL_AUTO=0
+if [[ -z "$LLM_MODEL" || "$LLM_MODEL" == "auto" ]]; then
+  LLM_MODEL_AUTO=1
+else
   export HINDSIGHT_API_LLM_MODEL="$LLM_MODEL"
+  export HINDSIGHT_LLM_MODEL="$LLM_MODEL"
 fi
 if [[ -n "$LLM_BASE_URL" ]]; then
   export HINDSIGHT_API_LLM_BASE_URL="$LLM_BASE_URL"
-fi
-if [[ -n "$LLM_MODEL" ]]; then
-  export HINDSIGHT_LLM_MODEL="$LLM_MODEL"
 fi
 if [[ -n "$LLM_STACK" ]]; then
   export HINDSIGHT_LLM_STACK="$LLM_STACK"
@@ -162,4 +207,89 @@ elif [[ -n "$LLM_START_CMD" ]]; then
   fi
 fi
 
-exec "$ROOT/.venv/bin/hindsight-api" "${FORWARD_ARGS[@]}"
+start_hindsight_child() {
+  "$ROOT/.venv/bin/hindsight-api" "${FORWARD_ARGS[@]}" &
+  echo $!
+}
+
+apply_bank_configs_once() {
+  if [[ "$APPLY_BANKS_ON_START" -ne 1 ]]; then
+    return 0
+  fi
+
+  local api_host="${HINDSIGHT_API_HOST:-127.0.0.1}"
+  local api_port="${HINDSIGHT_API_PORT:-8888}"
+  local base_url="http://${api_host}:${api_port}"
+  echo "ensuring Hindsight bank configs from repo are applied" >&2
+  wait_for_http "${base_url}/health" "$APPLY_BANKS_TIMEOUT" 1
+  "$ROOT/.venv/bin/python" "$ROOT/scripts/push_banks.py" --base-url "$base_url" --no-pull-after
+}
+
+stop_hindsight_child() {
+  local pid="$1"
+  kill "$pid" >/dev/null 2>&1 || true
+  for _ in {1..30}; do
+    if ! kill -0 "$pid" >/dev/null 2>&1; then
+      wait "$pid" >/dev/null 2>&1 || true
+      return 0
+    fi
+    sleep 1
+  done
+  kill -9 "$pid" >/dev/null 2>&1 || true
+  wait "$pid" >/dev/null 2>&1 || true
+}
+
+if [[ "$LLM_MODEL_AUTO" -ne 1 ]]; then
+  trap '[[ -n "${child_pid:-}" ]] && stop_hindsight_child "$child_pid"; exit 0' TERM INT
+  child_pid="$(start_hindsight_child)"
+  apply_bank_configs_once
+  wait "$child_pid"
+  exit $?
+fi
+
+if [[ -z "$LLM_BASE_URL" ]]; then
+  echo "cannot auto-discover LLM model without HINDSIGHT_API_LLM_BASE_URL/HINDSIGHT_LLM_BASE_URL" >&2
+  exit 1
+fi
+
+# Auto mode intentionally allows Hindsight to start before the LLM backend is up.
+# If /v1/models is unavailable, start with model=auto; Hindsight already tolerates
+# failed startup LLM verification. The wrapper keeps polling /v1/models and
+# restarts Hindsight when the actual served model appears or changes.
+trap '[[ -n "${child_pid:-}" ]] && stop_hindsight_child "$child_pid"; exit 0' TERM INT
+
+current_model="${HINDSIGHT_API_LLM_MODEL:-auto}"
+while true; do
+  if discovered_model="$(discover_openai_model "$LLM_BASE_URL" 2>/dev/null)" && [[ -n "$discovered_model" ]]; then
+    current_model="$discovered_model"
+    echo "discovered Hindsight LLM model from ${LLM_BASE_URL%/}/models: $current_model" >&2
+  else
+    echo "Hindsight LLM model auto-discovery unavailable at ${LLM_BASE_URL%/}/models; starting with model=$current_model" >&2
+  fi
+
+  export HINDSIGHT_API_LLM_MODEL="$current_model"
+  export HINDSIGHT_LLM_MODEL="$current_model"
+  child_pid="$(start_hindsight_child)"
+  apply_bank_configs_once
+  restart_requested=0
+
+  while kill -0 "$child_pid" >/dev/null 2>&1; do
+    sleep "$AUTO_MODEL_POLL_INTERVAL"
+    if [[ "$AUTO_MODEL_RESTART_ON_CHANGE" -eq 1 ]] \
+      && discovered_model="$(discover_openai_model "$LLM_BASE_URL" 2>/dev/null)" \
+      && [[ -n "$discovered_model" && "$discovered_model" != "$current_model" ]]; then
+      echo "Hindsight LLM model changed: $current_model -> $discovered_model; restarting API" >&2
+      current_model="$discovered_model"
+      restart_requested=1
+      stop_hindsight_child "$child_pid"
+      break
+    fi
+  done
+
+  if [[ "$restart_requested" -eq 1 ]]; then
+    continue
+  fi
+
+  wait "$child_pid"
+  exit $?
+done
