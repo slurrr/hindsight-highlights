@@ -65,6 +65,31 @@ Useful launch overrides live in:
 - `env/hindsight.launch.env`
 - `env/hindsight.local.env` (gitignored)
 
+## Monitoring / dashboards
+
+### Start or recreate Grafana LGTM monitoring
+```bash
+hindsight monitoring -d --force-recreate
+```
+
+Grafana: <http://localhost:3000>
+
+### Verify dashboard metric plumbing
+```bash
+uv run python scripts/monitoring_doctor.py
+```
+
+Expected result: Prometheus target `http://127.0.0.1:8888/metrics` is `UP`, and `hindsight_llm_*` queries return non-zero series. If this fails, Grafana dashboards will be empty even though Hindsight traces may still appear.
+
+### Important model-label note
+
+For useful LLM comparison dashboards, start/restart Hindsight after the LLM backend on `127.0.0.1:8002` is healthy so `HINDSIGHT_API_LLM_MODEL=auto` resolves to the served model name instead of staying `auto`.
+
+```bash
+hindsight restart
+uv run python scripts/monitoring_doctor.py
+```
+
 ## Runtime evidence
 
 ### Monitor VRAM for the Hindsight API PID

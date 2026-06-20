@@ -247,6 +247,10 @@ if [[ "$LLM_MODEL_AUTO" -ne 1 ]]; then
   exit $?
 fi
 
+if [[ "$WAIT_FOR_LLM" -eq 1 && -n "$LLM_HEALTH_URL" ]]; then
+  wait_for_http "$LLM_HEALTH_URL" "$LLM_START_TIMEOUT" "$LLM_START_INTERVAL"
+fi
+
 if [[ -z "$LLM_BASE_URL" ]]; then
   echo "cannot auto-discover LLM model without HINDSIGHT_API_LLM_BASE_URL/HINDSIGHT_LLM_BASE_URL" >&2
   exit 1
