@@ -65,5 +65,17 @@ EOF
 
 echo "hindsight monitoring: Grafana http://localhost:3000" >&2
 echo "hindsight monitoring: OTEL http://localhost:4318" >&2
+
+shipper_pid_file="$RUN_DIR/loki-journal-shipper.pid"
+if [[ -f "$shipper_pid_file" ]]; then
+  old_pid="$(cat "$shipper_pid_file" 2>/dev/null || true)"
+  if [[ -n "$old_pid" ]] && kill -0 "$old_pid" >/dev/null 2>&1; then
+    kill "$old_pid" >/dev/null 2>&1 || true
+  fi
+fi
+nohup "$ROOT/.venv/bin/python" "$ROOT/scripts/loki_journal_shipper.py" --since "1 hour ago" >"$RUN_DIR/loki-journal-shipper.log" 2>&1 &
+echo $! > "$shipper_pid_file"
+echo "hindsight monitoring: Loki journal shipper pid $(cat "$shipper_pid_file")" >&2
+
 cd "$RUN_DIR"
 exec docker-compose up "$@"

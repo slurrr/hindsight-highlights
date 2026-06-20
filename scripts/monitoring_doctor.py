@@ -11,6 +11,7 @@ from typing import Any
 API = "http://127.0.0.1:8888"
 GRAFANA = "http://127.0.0.1:3000"
 PROM_PROXY = f"{GRAFANA}/api/datasources/proxy/uid/prometheus"
+LOKI_PROXY = f"{GRAFANA}/api/datasources/proxy/uid/loki"
 
 
 def fetch(url: str, timeout: float = 10.0) -> bytes:
@@ -80,6 +81,19 @@ def main() -> int:
         except Exception as e:  # noqa: BLE001
             print(f"  {query}: FAIL {e}")
             failed = True
+
+    print("\nLoki Hindsight logs:")
+    try:
+        url = f"{LOKI_PROXY}/loki/api/v1/labels"
+        labels = get_json(url).get("data", [])
+        print(f"  labels available={len(labels)}")
+        query_url = f"{LOKI_PROXY}/loki/api/v1/query_range?" + urllib.parse.urlencode({"query": '{job="hindsight-journal"}', "limit": 5})
+        result = get_json(query_url).get("data", {}).get("result", [])
+        print(f"  hindsight-journal streams={len(result)}")
+        if not result:
+            print("  WARN no Hindsight journal logs in Loki yet; restart monitoring or generate a service log line")
+    except Exception as e:  # noqa: BLE001
+        print(f"  WARN Loki check failed: {e}")
 
     return 1 if failed else 0
 
