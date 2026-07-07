@@ -1,23 +1,10 @@
-[Unit]
-Description=Hindsight API (local system service)
-Documentation=file:/home/poop/code/dev/hindsight-highlights/docs/PLAN.md
-After=network-online.target postgresql.service
-Wants=network-online.target
-Requires=postgresql.service
-
-[Service]
-Type=simple
-User=poop
-Group=poop
-WorkingDirectory=/home/poop/code/dev/hindsight-highlights
-SELinuxContext=-unconfined_u:unconfined_r:unconfined_t:s0
-Environment=PYTHONUNBUFFERED=1
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=hindsight-api
-ExecStart=/usr/bin/bash -lc 'set -a; source /home/poop/code/dev/hindsight-highlights/env/hindsight.env; set +a; exec /home/poop/code/dev/hindsight-highlights/.venv/bin/hindsight-api --host "$HINDSIGHT_API_HOST" --port "$HINDSIGHT_API_PORT"'
-Restart=on-failure
-RestartSec=2
-
-[Install]
-WantedBy=multi-user.target
+# Deprecated placeholder: do not install this as a system service.
+#
+# Hindsight on this workstation is intentionally managed only as a manual
+# systemd --user service from:
+#   systemd/user/hindsight-api.service
+#
+# Postgres remains the only system-level service dependency.
+# The previously installed /etc/systemd/system/hindsight-api.service was removed
+# during the 2026-06-11 service audit to avoid duplicate API processes and port
+# contention on 127.0.0.1:8888.

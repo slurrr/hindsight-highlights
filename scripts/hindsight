@@ -8,6 +8,7 @@ UNIT_PATH="$HOME/.config/systemd/user/${UNIT_NAME}.service"
 SERVICE_ENV_FILE="$ROOT/env/hindsight.env"
 LAUNCH_ENV_FILE="$ROOT/env/hindsight.launch.env"
 PYTHON_BIN="$ROOT/.venv/bin/python"
+HINDSIGHT_SOURCE_ROOT="${HINDSIGHT_SOURCE_ROOT:-$HOME/code/vendor/hindsight}"
 LLM_MANAGER_VARS=(
   HINDSIGHT_LLM_MODEL
   HINDSIGHT_LLM_STACK
@@ -33,6 +34,14 @@ Commands:
   restart
   status
   logs [-f]
+  llm-logs [-f]
+  metrics
+  ops [--limit N] [--bank BANK_ID]
+  monitoring
+  ui [control-plane args...]
+  dashboard [--open]
+  source-info
+  sync-env [uv sync args...]
   doctor
   run [launch-wrapper options...]
   install-service
@@ -187,7 +196,31 @@ print_doctor_summary() {
   local enabled_state="$2"
   local health_json="$3"
 
-  printf '%s' "$health_json" | "$PYTHON_BIN" -c "import json,sys; active=sys.argv[1]; enabled=sys.argv[2]; checks=json.load(sys.stdin); mark=lambda item: 'ok' if item.get('ok') else 'fail'; print('hindsight: unit={} enabled={} postgres={} api={} vllm={}'.format(active, enabled, mark(checks.get('postgres_tcp', {})), mark(checks.get('hindsight_api_health', {})), mark(checks.get('vllm_health', {}))))" "$active_state" "$enabled_state"
+  printf '%s' "$health_json" | "$PYTHON_BIN" -c "import json,sys; active=sys.argv[1]; enabled=sys.argv[2]; checks=json.load(sys.stdin); mark=lambda item: 'ok' if item.get('ok') else 'fail'; llm=checks.get('llm_health') or checks.get('vllm_health', {}); print('hindsight: unit={} enabled={} postgres={} api={} llm={}'.format(active, enabled, mark(checks.get('postgres_tcp', {})), mark(checks.get('hindsight_api_health', {})), mark(llm)))" "$active_state" "$enabled_state"
+}
+
+active_agentmux_llm_log() {
+  local state_file="$HOME/runs/agentmux/state/active.json"
+  [[ -f "$state_file" ]] || return 1
+  "$PYTHON_BIN" - "$state_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+state = json.loads(Path(sys.argv[1]).read_text())
+services = state.get("services") or []
+for service in services:
+    log_path = service.get("log_path")
+    if service.get("name") == "llm" and log_path:
+        print(log_path)
+        raise SystemExit(0)
+for service in services:
+    log_path = service.get("log_path")
+    if log_path:
+        print(log_path)
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
 }
 
 get_journal_cursor() {
@@ -307,6 +340,51 @@ case "$cmd" in
     else
       journalctl_user -n 200 --no-pager "$@"
     fi
+    ;;
+  llm-logs)
+    if ! log_path="$(active_agentmux_llm_log)"; then
+      fail "no active agentmux LLM log found at ~/runs/agentmux/state/active.json"
+    fi
+    echo "hindsight: LLM log: $log_path" >&2
+    if [[ "${1:-}" == "-f" || "${1:-}" == "--follow" ]]; then
+      tail -n 80 -F "$log_path"
+    else
+      tail -n 200 "$log_path"
+    fi
+    ;;
+  metrics)
+    "$PYTHON_BIN" "$ROOT/scripts/hindsight_observe.py" metrics "$@"
+    ;;
+  ops)
+    "$PYTHON_BIN" "$ROOT/scripts/hindsight_observe.py" ops "$@"
+    ;;
+  monitoring)
+    exec "$ROOT/scripts/run-monitoring.sh" "$@"
+    ;;
+  ui)
+    exec "$ROOT/scripts/run-control-plane.sh" "$@"
+    ;;
+  dashboard)
+    case "${1:-}" in
+      --grafana) url="http://localhost:3000"; shift ;;
+      *) url="http://localhost:9999" ;;
+    esac
+    echo "hindsight: dashboard: $url"
+    echo "hindsight: Grafana metrics/traces: http://localhost:3000"
+    if [[ "${1:-}" == "--open" ]]; then
+      command -v xdg-open >/dev/null 2>&1 || fail "xdg-open not found"
+      xdg-open "$url" >/dev/null 2>&1 &
+    fi
+    ;;
+  sync-env)
+    exec "$ROOT/scripts/sync-env.sh" "$@"
+    ;;
+  source-info)
+    "$PYTHON_BIN" - <<'PY'
+import hindsight_api, hindsight_client
+print(f"hindsight_api={hindsight_api.__file__}")
+print(f"hindsight_client={hindsight_client.__file__}")
+PY
     ;;
   doctor)
     require_file "$SERVICE_ENV_FILE"

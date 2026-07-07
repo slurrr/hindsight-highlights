@@ -54,12 +54,14 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
+    security_opt:
+      - label=disable
     volumes:
-      - $RUN_DIR/prometheus.yaml:/otel-lgtm/prometheus.yaml:ro,z
-      - $UPSTREAM_DASH/hindsight-operations.json:/otel-lgtm/hindsight-operations.json:ro,z
-      - $UPSTREAM_DASH/hindsight-llm.json:/otel-lgtm/hindsight-llm.json:ro,z
-      - $UPSTREAM_DASH/hindsight-api-service.json:/otel-lgtm/hindsight-api-service.json:ro,z
-      - $UPSTREAM_MON/grafana-dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/grafana-dashboards.yaml:ro,z
+      - $RUN_DIR/prometheus.yaml:/otel-lgtm/prometheus.yaml:ro
+      - $UPSTREAM_DASH/hindsight-operations.json:/otel-lgtm/hindsight-operations.json:ro
+      - $UPSTREAM_DASH/hindsight-llm.json:/otel-lgtm/hindsight-llm.json:ro
+      - $UPSTREAM_DASH/hindsight-api-service.json:/otel-lgtm/hindsight-api-service.json:ro
+      - $UPSTREAM_MON/grafana-dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/grafana-dashboards.yaml:ro
     restart: unless-stopped
 EOF
 

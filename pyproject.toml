@@ -11,3 +11,10 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+# This repo is local ops/config only. Run Hindsight from the checked-out
+# upstream source tree under ~/code/vendor/hindsight, not from PyPI wheels.
+hindsight-api = { path = "../../vendor/hindsight/hindsight-api", editable = true }
+hindsight-api-slim = { path = "../../vendor/hindsight/hindsight-api-slim", editable = true }
+hindsight-client = { path = "../../vendor/hindsight/hindsight-clients/python", editable = true }

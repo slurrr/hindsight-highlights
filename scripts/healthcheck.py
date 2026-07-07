@@ -56,7 +56,7 @@ def main() -> None:
             "target": f"http://{api_host}:{api_port}/health",
             "result": http_check(f"http://{api_host}:{api_port}/health"),
         },
-        "vllm_health": {
+        "llm_health": {
             "target": llm_health,
             "result": http_check(llm_health),
         },

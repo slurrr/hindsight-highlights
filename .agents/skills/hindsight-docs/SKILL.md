@@ -115,6 +115,14 @@ references/best-practices.md
 - Multi-bank queries require client-side orchestration
 - Use `document_id` for conversation evolution (same ID = upsert)
 
+## Local 0.8.1 environment notes
+
+- The installed local repo may not include upstream `monitoring/` or `scripts/dev/start-grafana.sh`; check the working tree before assuming docs paths exist.
+- Live API metrics are available at `http://127.0.0.1:8888/metrics` when the user service is running.
+- Current Prometheus metric names use underscore/suffix forms such as `hindsight_llm_duration_seconds_*`, `hindsight_llm_calls_total`, `hindsight_llm_tokens_input_tokens_total`, `hindsight_operation_duration_seconds_*`, and `hindsight_operation_operations_total`.
+- OpenTelemetry tracing is disabled by default. Enable with `HINDSIGHT_API_OTEL_TRACES_ENABLED=true` and an OTLP endpoint such as Grafana Tempo/LGTM.
+- `HINDSIGHT_API_METRICS_INCLUDE_BANK_ID=false` by default; enable it only for low-cardinality local deployments if per-bank Prometheus views are needed.
+
 ---
 
 **Auto-generated** from `hindsight-docs/docs/`. Run `./scripts/generate-docs-skill.sh` to update.
